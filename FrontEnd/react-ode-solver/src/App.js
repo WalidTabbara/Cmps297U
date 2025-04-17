@@ -195,6 +195,66 @@ function App() {
     setOutput("");
   };
 
+  //upload pdfs
+  const [selectedPDF, setSelectedPDF] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState("");
+
+  const handlePDFUpload = async () => {
+    if (!selectedPDF) {
+      setUploadStatus("Please select a PDF file first.");
+      return;
+    }
+  
+    try {
+      const fileArrayBuffer = await selectedPDF.arrayBuffer(); 
+      console.log(fileArrayBuffer)
+      const response = await axios.post(
+        "https://6k3rznj86l.execute-api.eu-west-1.amazonaws.com/dev/upload",
+        fileArrayBuffer,
+        {
+          headers: {
+            "Content-Type": "application/pdf", 
+          },
+        }
+      );
+  
+      setUploadStatus("✅ Upload successful!");
+    } catch (error) {
+      console.error("Upload error:", error);
+      if (error.response) {
+        console.error("Server response:", error.response.data);
+        setUploadStatus(`❌ Upload failed: ${error.response.status} ${error.response.statusText}`);
+      } else {
+        setUploadStatus("❌ Upload failed. Check your network or the server.");
+      }
+    }
+  };  
+
+  //retrieve pdfs
+  const [pdfList, setPdfList] = useState([]);
+  const [isLoadingPDFs, setIsLoadingPDFs] = useState(false);
+
+  const fetchUploadedPDFs = async () => {
+    setIsLoadingPDFs(true);
+    try {
+      const response = await axios.get(
+        "https://q947q5arne.execute-api.eu-west-1.amazonaws.com/dev/get"
+      );
+
+      // AWS might return JSON string in body → parse it
+      const data =
+        typeof response.data.body === "string"
+          ? JSON.parse(response.data.body)
+          : response.data.body;
+
+      setPdfList(data.pdfs || []);
+    } catch (error) {
+      console.error("Failed to fetch PDFs:", error);
+      setPdfList([]);
+    }
+    setIsLoadingPDFs(false);
+  };
+
   return (
     <div className="container">
       <h1 className="header">ODE Solver</h1>
@@ -531,6 +591,55 @@ function App() {
           )}
         </div>
       )}
+      <div className="formGroup" style={{ marginTop: "3rem" }}>
+        <h3>Upload a PDF File</h3>
+        <input
+          type="file"
+          accept="application/pdf"
+          onChange={(e) => setSelectedPDF(e.target.files[0])}
+        />
+        <button
+          className="uploadButton"
+          onClick={handlePDFUpload}
+          style={{ marginTop: "10px" }}
+        >
+          Upload PDF
+        </button>
+        {uploadStatus && (
+          <p
+            style={{
+              marginTop: "8px",
+              color: uploadStatus.startsWith("✅") ? "green" : "red",
+            }}
+          >
+            {uploadStatus}
+          </p>
+        )}
+      </div>
+      <div className="formGroup">
+        <h3>View Uploaded PDFs</h3>
+        <button className="uploadButton" onClick={fetchUploadedPDFs}>
+          {isLoadingPDFs ? "Loading..." : "Fetch PDFs"}
+        </button>
+
+        {pdfList.length > 0 && (
+          <ul style={{ marginTop: "1rem" }}>
+            {pdfList.map((pdf, idx) => (
+              <li key={idx}>
+                <a href={pdf.url} target="_blank" rel="noopener noreferrer">
+                  📄 {pdf.filename}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {pdfList.length === 0 && !isLoadingPDFs && (
+          <p style={{ marginTop: "1rem", color: "#888" }}>
+            No PDFs found or error fetching.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
