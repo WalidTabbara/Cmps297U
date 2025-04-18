@@ -255,6 +255,32 @@ function App() {
     setIsLoadingPDFs(false);
   };
 
+  //generate odes using chatgpt
+  const [generatedODE, setGeneratedODE] = useState("");
+  const [isGeneratingODE, setIsGeneratingODE] = useState(false);
+  const [generateError, setGenerateError] = useState("");
+
+  const handleGenerateODE = async () => {
+    setIsGeneratingODE(true);
+    setGeneratedODE("");
+    setGenerateError("");
+  
+    try {
+      const response = await axios.get("https://zmscb26zwl.execute-api.eu-west-1.amazonaws.com/dev/generate");
+  
+      const rawLatex = response.data?.body || "";
+      setGeneratedODE(rawLatex);
+  
+      const stripped = rawLatex.replace(/\\\[|\\\]/g, "").trim();
+      setEquation(stripped);
+    } catch (error) {
+      console.error("Failed to generate ODE:", error);
+      setGenerateError("Failed to generate ODE. Please try again.");
+    }
+  
+    setIsGeneratingODE(false);
+  };
+  
   return (
     <div className="container">
       <h1 className="header">ODE Solver</h1>
@@ -637,6 +663,25 @@ function App() {
         {pdfList.length === 0 && !isLoadingPDFs && (
           <p style={{ marginTop: "1rem", color: "#888" }}>
             No PDFs found or error fetching.
+          </p>
+        )}
+      </div>
+      <div className="formGroup">
+        <h3>Generate a Random ODE</h3>
+        <button className="uploadButton" onClick={handleGenerateODE}>
+          {isGeneratingODE ? "Generating..." : "Generate ODE"}
+        </button>
+        {generatedODE && (
+          <div style={{ marginTop: "1rem" }}>
+            <strong>Generated Equation:</strong>
+            <div style={{ marginTop: "0.5rem" }}>
+              <Latex>{generatedODE}</Latex>
+            </div>
+          </div>
+        )}
+        {generateError && (
+          <p style={{ marginTop: "0.5rem", color: "red" }}>
+            ❌ {generateError}
           </p>
         )}
       </div>
