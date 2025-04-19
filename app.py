@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from sympy import symbols, sympify, integrate, Eq, latex, sin, cos, exp, Function, simplify, diff
+from sympy import symbols, sympify, integrate, Eq, latex, sin, cos, exp, Function, simplify, diff,sqrt,log,Matrix,Derivative
 import traceback
 from datetime import datetime, timedelta
 
@@ -16,7 +16,6 @@ def preprocess_input(expr_str):
     """
     return expr_str.replace("^", "**")
 
-# --- Separable ODE Solver ---
 def separable_solver(eq_str, x, y_sym):
     """
     Solves a separable ODE provided as a string of the form:
@@ -94,7 +93,6 @@ def separable_solver(eq_str, x, y_sym):
     
     return "\n".join(steps)
 
-# --- Linear ODE Solver ---
 def linear_solver(eq_str, x):
     from sympy import exp,simplify,integrate,latex
     """
@@ -666,7 +664,372 @@ def reduction_to_separation_solver(f_str, A_str, B_str, C_str, x):
     steps.append("Finally, substitute back \\(u = Ax+By+C\\) in the solution.")
     
     return "\n".join(steps)
+y = symbols("y")
+y_prime = symbols("y'")
+y_double_prime = symbols("y''")
+c_1 = symbols("c_1")
+c_2 = symbols("c_2")
+y_1 = symbols("y_1")
+y_2 = symbols("y_2")
+y_c_1 = symbols("y_c_1")
+y_c_2 = symbols("y_c_2")
+y_c = symbols("y_c")
+y_p = symbols("y_p")
 
+def homogeneous_reduction_of_order_solver(a_str,b_str,c_str,y1_str,x):
+    steps = []
+    a_x = sympify(a_str)
+    if a_x == 0: 
+        steps.append(f"$\\text{{Error:}} a(x) \\text{{cannot be zero.}} $")
+        return "\n".join(steps)
+    b_x = sympify(b_str)
+    c_x = sympify(c_str)
+    y_1 = sympify(y1_str)
+    eq = Eq(a_x*y_double_prime + b_x*y_prime + c_x*y, 0)
+    steps.append(f"$\\text{{You are using reduction of order to find a linearly independent solution }} {latex(y_2)} \\text{{ of the differential equation }}$")
+    steps.append(f"${latex(eq)} \\text{{  given your solution  }} {latex(y_1)}.$")
+    if a_x != 1:
+        P_x = simplify(b_x / a_x)
+        Q_x = simplify(c_x / a_x)
+        steps.append(f"\\text{{First, make sure you divide by }} {latex(a_x)}.")
+        eq = Eq(y_double_prime + P_x*y_prime+Q_x*y, 0)
+        steps.append(f"$\\text{{Your new differential equation is now: }} {latex(eq)}.$")
+    int_P_x = simplify(integrate(P_x,x))
+    steps.append(f"$\\text{{Now, start off by computing}} \\int {latex(P_x)} dx = {latex(int_P_x)}.$")
+    y1_squared = y_1*y_1
+    steps.append(f"$\\text{{From here, compute the following integral: }} \\int \\frac{{{latex(exp(-int_P_x))}}}{{{latex(y1_squared)}}} dx.$")
+    simplify1 = simplify(exp(-int_P_x))
+    simplify2 = simplify(simplify1 / y_1**2)
+    steps.append(f"$\\text{{Which reduces to: }} \\int {latex(simplify2)} dx.$")
+    simplify3 = simplify(integrate(simplify2,x))
+    steps.append(f"$\\text{{Which reduces to: }} {latex(simplify3)} .$")
+    overall_result = simplify(y_1*simplify3)
+    steps.append(f"$\\text{{Therefore, the second linearly independent solution  }} {latex(y_2)} \\text{{  is: }} \\left( {latex(simplify3)} \\right) \\left( {latex(y_1)} \\right) = {latex(overall_result)}.$")
+    return "\n".join(steps)
+
+def homogeneous_constant_coefficients(a_str, b_str, c_str,x):
+    steps = []
+    a = sympify(a_str)
+    if a == 0:
+        steps.append(f"$\\text{{Error: a cannot be zero!}}$")
+        return "\n".join(steps)
+    b = sympify(b_str)
+    c = sympify(c_str)
+    if not a.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{a}} must be a constant.}}$")
+        return "\n".join(steps)
+    if not b.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{b}} must be a constant.}}$")
+        return "\n".join(steps)
+    if not c.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{c}} must be a constant.}}$")
+        return "\n".join(steps)
+    eq = Eq(a*y_double_prime + b*y_prime + c*y, 0)
+    steps.append(f"$\\text{{You are solving the differential equaiton: }} {latex(eq)}.$")
+    delta = b*b - 4*a*c 
+    steps.append(f"$\\text{{Start off by computing }} \\Delta =  {latex(b**2)} - 4({latex(a)})({latex(c)}) = {delta}.$")
+    if delta > 0: 
+        m_1 = (-b + sqrt(delta)) / (2*a)
+        m_2 = (-b - sqrt(delta)) / (2*a)
+        steps.append(f"$\\text{{In this case }} \\Delta > 0 \\text{{, which means that the roots are:  }} m_1 = {latex(m_1)}, m_2 = {latex(m_2)}$")
+        eq = Eq(y, c_1*exp(m_1*x) + c_2*exp(m_2*x))
+    
+    elif delta == 0: 
+        m = -b / (2*a)
+        steps.append(f"$\\text{{In this case }} \\Delta = 0, \\text{{, which means that there is only one root:}} {m}.$")
+        eq = Eq(y_1, exp(m*x))
+        steps.append(f"$\\text{{Thus, we have one solution: }} {latex(eq)}.$")
+        steps.append(f"$\\text{{We still need to find }} {latex(y_2)}\\text{{ which is linearly independent to }} {latex(y_1)}.$")
+        eq = Eq(y_2, x*y_1)
+        steps.append(f"$\\text{{Apply reduction of order! It will always be the case that }} {latex(eq)}.$")
+        steps.append(f"$\\text{{(Verify this using the reduction of order calculator)}}.$")
+        eq = Eq(y_2, x*y_1)
+        steps.append(f"$\\text{{Hence, the second solution is: }} {latex(eq)}.$")
+        eq = Eq(y, c_1*exp(m*x) + c_2*x*exp(m*x))
+    
+    else:
+        steps.append(f"$\\text{{In this case }} \\Delta < 0, \\text{{ which means that the roots are of the form }} \\alpha \\pm \\beta i.$")
+        alpha = -b / (2*a)
+        beta = sqrt(-delta) / 2*a
+        steps.append(f"$\\text{{Calculate }} \\alpha \\text{{ and }} \\beta \\text{{ to get that: }} \\alpha = {latex(alpha)} \\text{{ and }} \\beta = {latex(beta)}.$")
+        eq = Eq(y, x**alpha*(c_1*cos(beta*x) + c_2*sin(beta*x)))
+    
+    steps.append(f"$\\text{{Your overall solution is: }} {latex(eq)}.$")
+    return "\n".join(steps)
+
+def homogeneous_Cauchy_Euler(a_str, b_str, c_str,x):
+    steps = []
+    a = sympify(a_str)
+    if a == 0:
+        steps.append(f"$\\text{{Error: a cannot be zero!}}$")
+        return "\n".join(steps)
+    b = sympify(b_str)
+    c = sympify(c_str)
+    if not a.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{a}} must be a constant.}}$")
+        return "\n".join(steps)
+    if not b.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{b}} must be a constant.}}$")
+        return "\n".join(steps)
+    if not c.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{c}} must be a constant.}}$")
+        return "\n".join(steps)
+    eq = Eq(a*x**2*y_double_prime + b*x*y_prime  +c*y, 0)
+    m = symbols("m")
+    steps.append(f"$\\text{{You are solving the differential equaiton: }} {latex(eq)}.$")
+    eq = Eq(y, x**m)
+    steps.append(f"$\\text{{Start off by making the substitution }} {latex(eq)}.$")
+    t = m-1
+    s = m-2
+    eq = Eq(a*x**2*m*(m-1) + b*x*m*x**t + c*x**m, 0)
+    steps.append(f"${latex(eq)}.$")
+    eq = Eq(a*m*(m-1)*x**m + b*m*x**m  +c*x**m, 0)
+    steps.append(f"${latex(eq)}.$")
+    eq = Eq(a*m*(m-1) + b*m + c, 0)
+    steps.append(f"$\\text{{Cancel }} {latex(x**m)} \\text{{  provided }} x \\neq 0. \\text{{We get the new equation: }} {latex(eq)}. $")
+    eq = Eq(a*m**2 + (b-a)*m + c, 0)
+    steps.append(f"$\\text{{Which reduces to: }} {latex(eq)}.$")
+    delta = (b - a)*(b - a) - 4*a*c
+    steps.append(f"$\\text{{From here proceed as follows: }} \\Delta =  ({latex((b-a)**2)}) - 4({latex(a)})({latex(c)}) = {delta}.$")
+    if delta > 0: 
+        m_1 = (-(b-a) + sqrt(delta)) / (2*a)
+        m_2 = (-(b-a) - sqrt(delta)) / (2*a)
+        steps.append(f"$\\text{{In this case }} \\Delta > 0 \\text{{,which means that the roots are:  }} m_1 = {latex(m_1)}, m_2 = {latex(m_2)}$")
+        eq = Eq(y, c_1*x**m_1 + c_2*x**m_2)
+    elif delta == 0: 
+        m = -b / (2*a)
+        steps.append(f"$\\text{{In this case }} \\Delta = 0, \\text{{, which means that there is only one root:}} {m}.$")
+        eq = Eq(y_1, x**m)
+        steps.append(f"$\\text{{Thus, we have one solution: }} {latex(eq)}.$")
+        steps.append(f"$\\text{{We still need to find }} {latex(y_2)} \\text{{ which is linearly independent to }} {latex(y_1)}.$")
+        eq = Eq(y_2, log(x)*y_1)
+        steps.append(f"$\\text{{Apply reduction of order! It will always be the case that }} {latex(eq)}.$")
+        y_1 = x**m
+        steps.append(f"$\\text{{(Verify this using the reduction of order calculator)}}.$")
+        eq = Eq(y_2, y_1*log(x))
+        steps.append(f"$\\text{{Hence, the second solution is: }} {latex(eq)}.$")
+        y_2 = log(x)*y_1
+        eq = Eq(y, c_1*y_1 + c_2*y_2)    
+    else:
+        steps.append(f"$\\text{{In this case }} \\Delta < 0, \\text{{ which means that the roots are of the form }} \\alpha \\pm \\beta i.$")
+        alpha = -b / (2*a)
+        beta = sqrt(-delta) / 2*a
+        steps.append(f"$\\text{{Calculate }} \\alpha \\text{{ and }} \\beta \\text{{ to get that: }} \\alpha = {latex(alpha)} \\text{{ and }} \\beta = {latex(beta)}.$")
+        eq = Eq(y, x**alpha*(c_1*cos(beta*log(x)) + c_2*sin(beta*log(x))))
+    
+    steps.append(f"$\\text{{The overall solution is therefore: }} {latex(eq)} $")
+    return "\n".join(steps)
+
+def variation_of_parameters(f_x, y1_x, y2_x, steps, x):
+    y1_x_prime = diff(y1_x)
+    y2_x_prime = diff(y2_x)
+    W = Matrix([[y1_x, y2_x], [y1_x_prime, y2_x_prime]])
+    W_1 = Matrix([[0, y2_x], [f_x, y2_x_prime]])
+    W_2 = Matrix([[y1_x, 0], [y1_x_prime, f_x]])
+    steps.append(f"$\\text{{Compute the determinant of each of the following matrices: }}.$")
+    steps.append(f"$W = {latex(W)}, W_1 = {latex(W_1)}, W_2 = {latex(W_2)} $")
+    detW = simplify(y1_x*y2_x_prime - y1_x_prime*y2_x)
+    detW_1 = simplify(-f_x*y2_x)
+    detW_2 = simplify(y1_x*f_x)
+    steps.append(f"$\\text{{det}} W = ({latex(y1_x)})({latex(y2_x_prime)}) - ({latex(y1_x_prime)})({latex(y2_x)}) = {latex(detW)}.$")
+    steps.append(f"$\\text{{det}} W_1 = (0)({latex(y2_x_prime)}) - ({latex(f_x)})({latex(y2_x)}) = {latex(detW_1)}.$")
+    steps.append(f"$\\text{{det}} W_2 = ({latex(y1_x)})({latex(f_x)}) - ({latex(y1_x_prime)})({latex(0)}) = {latex(detW_2)}.$")
+    u_1_prime = simplify((detW_1) / (detW))
+    steps.append(f"$u_1' = \\frac{{det W_1}}{{det W}} = {latex(u_1_prime)}.$")
+    u_2_prime = simplify((detW_2) / (detW))
+    steps.append(f"$u_2' = \\frac{{det W_2}}{{det W}} = {latex(u_2_prime)}.$")
+    u1 = simplify(integrate(u_1_prime,x))
+    u2 = simplify(integrate(u_2_prime,x))
+    steps.append(f"$\\text{{From here, integrate to get: }}$")
+    steps.append(f"$u_1 = \\int {latex(u_1_prime)} dx = {latex(u1)}.$")
+    steps.append(f"$u_2 = \\int {latex(u_2_prime)} dx = {latex(u2)}.$")
+    eq = Eq(y_p, u1*y1_x + u2*y2_x)
+    steps.append(f"$\\text{{The particular solution is then: }} {latex(eq)}.$")
+    y_c = symbols("y_c")
+    c_1 = symbols("c_1")
+    c_2 = symbols("c_2")
+    eq = Eq(y_c + y_p, c_1*y1_x + c_2*y2_x + u1*y1_x + u2*y2_x)
+    steps.append(f"\\text{{The overall solution is then: }} y = {latex(eq)}.")
+
+def NonHomogenous_constant_coefficient(a_str,b_str,c_str,f_str,x):
+    steps = []
+    a = sympify(a_str)
+    if a == 0:
+        steps.append(f"$\\text{{Error: a cannot be zero!}}$")
+        return "\n".join(steps)
+    b = sympify(b_str)
+    c = sympify(c_str)
+    f_x = sympify(f_str)
+    if not a.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{a}} must be a constant.}}$")
+        return "\n".join(steps)
+    if not b.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{b}} must be a constant.}}$")
+        return "\n".join(steps)
+    if not c.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{c}} must be a constant.}}$")
+        return "\n".join(steps)
+    eq = Eq(a*y_double_prime + b*y_prime + c*y, f_x)
+    steps.append(f"$\\text{{You are solving the differential equation: }} {latex(eq)}$")
+    eq = Eq(a*y_double_prime + b*y_prime + c*y, 0)
+    steps.append(f"$\\text{{The first step is to solve the homogeneous version of your differential equation: }} {latex(eq)} $")
+    delta = b*b - 4*a*c 
+    steps.append(f"$\\text{{Start off by computing }} \\Delta =  ({latex(b)})({latex(b)}) - 4({latex(a)})({latex(c)}) = {delta}.$")
+    if delta > 0: 
+        m_1 = (-b + sqrt(delta)) / (2*a)
+        m_2 = (-b - sqrt(delta)) / (2*a)
+        y_c_1 = exp(m_1*x)
+        y_c_2 = exp(m_2*x)
+        steps.append(f"$\\text{{In this case }} \\Delta > 0 \\text{{,which means that the roots are:  }} m_1 = {latex(m_1)}, m_2 = {latex(m_2)}$")
+        eq = Eq(y_c, c_1*y_c_1 + c_2*y_c_2)
+    elif delta == 0: 
+        m = -b / (2*a)
+        steps.append(f"$\\text{{In this case }} \\Delta = 0, \\text{{ which means that there is only one root:}} {m}.$")
+        y_c_1 = exp(m*x)
+        eq = Eq(y_1, y_c_1)
+        steps.append(f"$\\text{{Thus, we have one solution: }} {latex(eq)}.$")
+        steps.append(f"$\\text{{We still need to find }} {latex(y_2)} \\text{{ which is linearly independent to }} {latex(y_1)}.$")
+        eq = Eq(y_2, x*y_1)
+        steps.append(f"$\\text{{Apply reduction of order! It will always be the case that }} {latex(eq)}.$")
+        steps.append(f"$\\text{{(Verify this using the reduction of order calculator)}}.$")
+        y_c_2 = simplify(x*y_c_1)
+        eq = Eq(y_2, y_c_2)
+        steps.append(f"$\\text{{Hence, the second solution is: }} {latex(eq)}.$")
+        eq = Eq(y_c, c_1*y_c_1 + c_2*y_c_2)
+    else:
+        steps.append(f"$\\text{{In this case }} \\Delta < 0, \\text{{ which means that the roots are of the form }} \\alpha \\pm \\beta i.$")
+        alpha = -b / (2*a)
+        beta = sqrt(-delta) / 2*a
+        steps.append(f"$\\text{{Calculate }} \\alpha \\text{{ and }} \\beta \\text{{ to get that: }} \\alpha = {latex(alpha)} \\text{{ and }} \\beta = {latex(beta)}.$")
+        y_c_1 = cos(beta*x)
+        y_c_2 = sin(beta*x)
+        eq = Eq(y_c, exp(alpha*x)*c_1*y_c_1 + c_2*y_c_2)
+    steps.append(f"\\text{{The solution is the homogeneous version of your differential equation is: }} {latex(eq)}")
+    eq = Eq(a*y_double_prime + b*y_prime + c*y, f_x)
+    steps.append(f"$\\text{{Proceed now to find}} {latex(y_p)} \\text{{ for the differential equation: }} {latex(eq)}$")
+    if a != 1: 
+            P = simplify(b / a)
+            Q = simplify(c / a)
+            f_x = simplify(f_x / a)
+            eq = Eq(y_double_prime + P*y_prime + Q*y, 0)
+            steps.append(f"$\\text{{Divide by {latex(a)} to get: }} {latex(eq)}.$")
+    
+    variation_of_parameters(f_x,y_c_1,y_c_2,steps,x)
+
+    return "\n".join(steps)
+
+def NonHomogeneous_Cauchy_Euler(a_str,b_str,c_str,f_str,x):
+    steps = []
+    a = sympify(a_str)
+    if a == 0:
+        steps.append(f"$\\text{{Error: a cannot be zero!}}$")
+        return "\n".join(steps)
+    b = sympify(b_str)
+    c = sympify(c_str)
+    f_x = sympify(f_str)
+    if not a.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{a}} must be a constant.}}$")
+        return "\n".join(steps)
+    if not b.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{b}} must be a constant.}}$")
+        return "\n".join(steps)
+    if not c.is_constant():
+        steps.append(f"$\\text{{Error: \\textbf{{c}} must be a constant.}}$")
+        return "\n".join(steps)
+    if f_x == 0:
+        steps.append(f"$\\text{{Your equation is homogeneous, use the homogeneous calculator it would make it easier for me!.}}$")
+        return "\n".join(steps)
+    eq = Eq(a*x**2*y_double_prime + b*x*y_prime + c*y ,f_x)
+    steps.append(f"$\\text{{You are solving the differential equaiton: }} {latex(eq)}.$")
+    eq = Eq(a*x**2*y_double_prime + b*x*y_prime + c*y ,0)
+    steps.append(f"$\\text{{The first step in solving your differential equation is solving the homogeneous version of it: }} {latex(eq)}.$")
+    m = symbols("m")
+    eq = Eq(y, x**m)
+    steps.append(f"$\\text{{Start off by making the substitution }} {latex(eq)}.$")
+    t = m-1
+    s = m-2
+    eq = Eq(a*x**2*m*(m-1)*x**s + b*x*m*x**t + c*x**m, 0)
+    steps.append(f"${latex(eq)}$")
+    eq = Eq(a*m*(m-1)*x**m + b*m*x**m + c*x**m, 0)
+    steps.append(f"${latex(eq)}.$")
+    eq = Eq(a*m*(m-1) + b*m + c, 0)
+    steps.append(f"$\\text{{Cancel }} {latex(x**m)} \\text{{  provided }} x \\neq 0. \\text{{We get the new equation: }} {latex(eq)}. $")
+    eq = Eq(a*m**2 + b*m - a*m + c, 0)
+    steps.append(f"$\\text{{Which reduces to: }} {latex(eq)} $")
+    delta = (b - a)*(b - a) - 4*a*c
+    steps.append(f"$\\text{{From here proceed as follows: }} \\Delta =  {latex((b-a)**2)} - 4({latex(a)})({latex(c)}) = {delta}.$")
+    if delta > 0: 
+        m_1 = (-(b-a) + sqrt(delta)) / (2*a)
+        m_2 = (-(b-a) - sqrt(delta)) / (2*a)
+        steps.append(f"$\\text{{In this case }} \\Delta > 0 \\text{{,which means that the roots are:  }} m_1 = {latex(m_1)}, m_2 = {latex(m_2)}.$")
+        y_c_1 = x**m_1
+        y_c_2 = x**m_2
+        eq = Eq(y_c,c_1*y_c_1 + c_2*y_c_2)
+    elif delta == 0: 
+        root = -b / (2*a)
+        eq = Eq(m, root)
+        steps.append(f"$\\text{{In this case }} \\Delta = 0 \\text{{, which means that there is only one root: }} {latex(eq)}.$")
+        y_c_1 = x**root
+        eq = Eq(y_1, y_c_1)
+        steps.append(f"$\\text{{Thus, we have one solution: }} {latex(eq)}.$")
+        steps.append(f"$\\text{{We still need to find }} {latex(y_2)} \\text{{ which is linearly independent to }} {latex(y_1)}.$")
+        eq = Eq(y_2, log(x)*y_1)
+        steps.append(f"$\\text{{Apply reduction of order! It will always be the case that }} {latex(eq)}.$")
+        steps.append(f"$\\text{{(Verify this using the reduction of order calculator)}}.$")
+        y_c_2 = simplify(log(x)*y_c_1)
+        eq = Eq(y_2, y_c_2)
+        steps.append(f"$\\text{{Hence, the second solution is: }} {latex(eq)}.$")
+        eq = Eq(y_c, c_1*y_c_1+c_2*y_c_2)
+    else:
+        steps.append(f"$\\text{{In this case }} \\Delta < 0, \\text{{ which means that the roots are of the form }} \\alpha \\pm \\beta i.$")
+        alpha = -b / (2*a)
+        beta = sqrt(-delta) / 2*a
+        steps.append(f"$\\text{{Calculate }} \\alpha \\text{{ and }} \\beta \\text{{ to get that: }} \\alpha = {latex(alpha)} \\text{{ and }} \\beta = {latex(beta)}.$")
+        y_c_1 = cos(beta*log(x))
+        y_c_2 = sin(beta*log(x))
+        eq = Eq(y_c, c_1*x**alpha*y_c_1  +c_2*x**alpha*y_c_2)
+    steps.append(f"$\\text{{Therefore, the solution to the homogeneous version of your differential equation is: }} {latex(eq)} $")
+    eq = Eq(a*x**2*y_double_prime + b*x*y_prime + c*y, f_x)
+    steps.append(f"$\\text{{Proceed now to find }} y_p \\text{{ for the differential equation: }} {latex(eq)}.$")
+    avoid = a*x**2
+    P = simplify(b / avoid)
+    Q = simplify(c / avoid)
+    f_x = simplify(f_x / avoid)
+    eq = Eq(y_double_prime + P*y_prime + Q, f_x)
+    steps.append(f"$\\text{{Divide by }} {latex(avoid)}   \\text{{ to get the new differential equation: }} {latex(eq)}.$")
+    steps.append(f"$\\text{{Make sure to exclude zero from the domain of your solution.}}$")
+    variation_of_parameters(f_x,y_c_1,y_c_2,steps,x)
+    return "\n".join(steps)
+
+def NonHomogeneous_Variation_of_Parameters(a_str,b_str,c_str,f_str,y_1_str,y_2_str,x):
+    steps = []
+    a_x = sympify(a_str)
+    if a_x == 0: 
+        steps.append(f"$\\text{{Error: a(x) cannot be zero.}}$")
+        return "\n".join(steps)
+    b_x = sympify(b_str)
+    c_x = sympify(c_str)
+    f_x = sympify(f_str)
+    y1_x = sympify(y_1_str)
+    y2_x = sympify(y_2_str)
+    y_c = y1_x + y2_x
+    eq = Eq(a_x*y_double_prime + b_x*y_prime + c_x*y, f_x)
+    steps.append(f"$\\text{{You are solving the differential equation: }} {latex(eq)}. $")
+    eq = Eq(a_x*y_double_prime + b_x*y_prime + c_x*y, 0)
+    steps.append(f"$\\text{{The first step is to solve the homongenous version of your ODE: }} {latex(eq)}. $")
+    eq = Eq(y_1, y1_x)
+    steps.append(f"$\\text{{ which has two linearly independent solutions: }}$")
+    steps.append(f"{latex(eq)}")
+    eq = Eq(y_2, y2_x)
+    steps.append(f"${latex(eq)}$")
+    if a_x != 1:
+        P_x = simplify(b_x / a_x)
+        Q_x = simplify(c_x / a_x )
+        f_x = simplify(f_x / a_x)
+        eq = Eq(y_double_prime  +P_x*y_prime + Q_x*y, f_x)
+        steps.append(f"$\\text{{First, divide by {latex(a_x)} to get: }} {latex(eq)}.$")
+    variation_of_parameters(f_x,y1_x,y2_x,steps,x)
+    return "\n".join(steps)
 # --- /solve Endpoint ---
 @app.route("/solve", methods=["POST"])
 def solve():
@@ -675,53 +1038,65 @@ def solve():
         data = request.get_json()
         method = data.get("method", "")
         order = data.get("order", "")
-        
-        if order != "1":
-            return jsonify({"steps": "This is so cool.", "solution": ""})
-        
         x = symbols("x")
         result = {}
-        if method == "Separable":
-            y_sym = symbols("y")
-            eq_str = data.get("equation", "")
-            result = separable_solver(eq_str, x, y_sym)
-        elif method == "Linear":
-            eq_str = data.get("equation", "")
-            result = linear_solver(eq_str, x)
-        elif method == "Exact / Integrating Factor / Homogeneous":
-            M_input = data.get("Mxy", "")
-            N_input = data.get("Nxy", "")
-            y_sym = symbols("y")
-            result = exact_integratingFactor_Homogenous_solver(M_input, N_input, x, y_sym)
-        elif method == "Bernoulli":
-            eq_str = data.get("equation", "")
-            result = bernoulli_solver(eq_str, x)
-        elif method == "Reduction to Separation of Variables":
-            fInputVal = data.get("fInput", "")
-            A_val = data.get("A", "")
-            B_val = data.get("B", "")
-            C_val = data.get("C", "")
-            result = reduction_to_separation_solver(fInputVal, A_val, B_val, C_val, x)
-        else:
-            result = {"steps": "This method is not implemented in the new design.", "solution": ""}
-        
-        # Ensure result is a dictionary.
-        if isinstance(result, str):
-            result = {"steps": result, "solution": ""}
-        
-        # Construct user input string.
-        if data.get("equation", ""):
-            user_input = data.get("equation", "")
-        else:
-            parts = [data.get("Mxy", ""), data.get("Nxy", ""), data.get("fInput", "")]
-            user_input = " ; ".join([p for p in parts if p]).strip(" ;")
-        
-        record = {
-            "timestamp": datetime.now().isoformat(),
-            "input": user_input,
-            "solution": result.get("solution", "")
-        }
-        history_records.append(record)
+        if order == "1": 
+            if method == "Separable":
+                y_sym = symbols("y")
+                eq_str = data.get("equation", "")
+                result = separable_solver(eq_str, x, y_sym)
+            elif method == "Linear":
+                eq_str = data.get("equation", "")
+                result = linear_solver(eq_str, x)
+            elif method == "Exact / Integrating Factor / Homogeneous":
+                M_input = data.get("Mxy", "")
+                N_input = data.get("Nxy", "")
+                y_sym = symbols("y")
+                result = exact_integratingFactor_Homogenous_solver(M_input, N_input, x, y_sym)
+            elif method == "Bernoulli":
+                eq_str = data.get("equation", "")
+                result = bernoulli_solver(eq_str, x)
+            elif method == "Reduction to Separation of Variables":
+                fInputVal = data.get("fInput", "")
+                A_val = data.get("A", "")
+                B_val = data.get("B", "")
+                C_val = data.get("C", "")
+                result = reduction_to_separation_solver(fInputVal, A_val, B_val, C_val, x)
+            else:
+                result = {"steps": "This method is not implemented in the new design.", "solution": ""}
+        elif order == "2":
+            if method == "Homogeneous - Reduction of Order":
+                a_str = data.get("a","")
+                b_str = data.get("b","")
+                c_str = data.get("c","")
+                y1_str = data.get("y1", "")
+                result = homogeneous_reduction_of_order_solver(a_str, b_str, c_str, y1_str, x)
+            elif method == "Homogeneous - Constant Coefficients":
+                a_str = data.get("a","")
+                b_str = data.get("b","")
+                c_str = data.get("c","")
+                result = homogeneous_constant_coefficients(a_str,b_str,c_str,x)
+            elif method == "Homogeneous - Cauchy-Euler":
+                a_str = data.get("a","")
+                b_str = data.get("b","")
+                c_str = data.get("c","")
+                result = homogeneous_Cauchy_Euler(a_str,b_str,c_str,x)
+            elif method == "Non-Homogeneous - Constant Coefficients":
+                a_str = data.get("a","")
+                b_str = data.get("b","")
+                c_str = data.get("c","")
+                f_str = data.get("f","")
+                result = NonHomogenous_constant_coefficient(a_str,b_str,c_str,f_str,x)
+            elif method == "Non-Homogeneous - Cauchy-Euler":
+                a_str = data.get("a","")
+                b_str = data.get("b","")
+                c_str = data.get("c","")
+                f_str = data.get("f","")
+                result = NonHomogeneous_Cauchy_Euler(a_str,b_str,c_str,f_str,x)
+            if isinstance(result,str):
+                result = {"steps" : result, "solution": ""}
+        else: 
+            result = {"steps": "oops!"}
         
         return jsonify(result)
     except Exception as e:
