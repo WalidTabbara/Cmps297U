@@ -195,6 +195,86 @@ function App() {
     setOutput("");
   };
 
+  // subscribe to Learning Companion (add to email list) post: https://n7wj0oyecg.execute-api.eu-west-1.amazonaws.com/subscribe
+  const [subscriberEmail, setSubscriberEmail] = useState("");
+  const [subscribeStatus, setSubscribeStatus] = useState("");
+
+  const handleSubscribe = async () => {
+    if (!subscriberEmail) {
+      setSubscribeStatus("❌ Please enter a valid email.");
+      return;
+    }
+  
+    setSubscribeStatus("⏳ Subscribing...");
+  
+    try {
+      const res = await fetch("https://n7wj0oyecg.execute-api.eu-west-1.amazonaws.com/subscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email: subscriberEmail })
+      });
+  
+      const resultText = await res.text(); // Your Lambda returns plain text
+      setSubscribeStatus("✅ " + resultText);
+      setSubscriberEmail(""); // Clear field on success
+    } catch (err) {
+      console.error("Subscription error:", err);
+      setSubscribeStatus("❌ Subscription failed. Try again.");
+    }
+  };
+
+
+  // unsubscribe to Learning Companion (remove from email list) post: https://ho21nmnzd9.execute-api.eu-west-1.amazonaws.com/unsubscribe
+  const handleUnsubscribe = async () => {
+    if (!subscriberEmail) {
+      setSubscribeStatus("❌ Please enter your email to unsubscribe.");
+      return;
+    }
+  
+    setSubscribeStatus("⏳ Processing unsubscribe...");
+  
+    try {
+      const res = await fetch("https://ho21nmnzd9.execute-api.eu-west-1.amazonaws.com/unsubscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email: subscriberEmail })
+      });
+  
+      const resultText = await res.text();
+      setSubscribeStatus("✅ " + resultText);
+      setSubscriberEmail(""); // Optionally clear the field
+    } catch (err) {
+      console.error("Unsubscribe error:", err);
+      setSubscribeStatus("❌ Unsubscribe failed. Try again.");
+    }
+  };
+
+
+  // list emails (display subscribers) get: https://36mckc3nx1.execute-api.eu-west-1.amazonaws.com/emails
+  const [emailList, setEmailList] = useState([]);
+  const [emailListStatus, setEmailListStatus] = useState("");
+
+  const handleFetchEmails = async () => {
+    setEmailListStatus("⏳ Fetching...");
+    try {
+      const res = await fetch("https://36mckc3nx1.execute-api.eu-west-1.amazonaws.com/emails");
+      const data = await res.json();
+      if (data.emails && Array.isArray(data.emails)) {
+        setEmailList(data.emails);
+        setEmailListStatus(`✅ Fetched ${data.emails.length} emails.`);
+      } else {
+        setEmailListStatus("❌ Unexpected response format.");
+      }
+    } catch (err) {
+      console.error("Failed to fetch email list:", err);
+      setEmailListStatus("❌ Failed to fetch emails.");
+    }
+  };
+
   //upload pdfs
   const [selectedPDF, setSelectedPDF] = useState(null);
   const [uploadStatus, setUploadStatus] = useState("");
@@ -685,7 +765,59 @@ function App() {
           </p>
         )}
       </div>
-    </div>
+      <div className="formGroup" style={{ marginTop: "3rem" }}>
+        <h3>Subscribe / Unsubscribe from Daily Math Tips</h3> 
+        <input
+          type="email"
+          placeholder="Enter your email"
+          value={subscriberEmail}
+          onChange={(e) => setSubscriberEmail(e.target.value)}
+          style={{ width: "60%", padding: "0.5rem", marginBottom: "0.5rem" }}
+        />
+        <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
+          <button className="uploadButton" onClick={handleSubscribe}>
+            Subscribe
+          </button>
+          <button
+            className="uploadButton"
+            style={{ backgroundColor: "#f44336" }} // red button
+            onClick={handleUnsubscribe}
+          >
+            Unsubscribe
+          </button>
+        </div>
+        {subscribeStatus && (
+          <p
+            style={{
+              marginTop: "8px",
+              color: subscribeStatus.includes("✅") ? "green" : "red",
+            }}
+          >
+            {subscribeStatus}
+          </p>
+        )}
+      </div>
+      <div className="formGroup" style={{ marginTop: "3rem" }}>
+        <h3>View Subscribed Emails</h3>
+        <button className="uploadButton" onClick={handleFetchEmails}>
+          Fetch Email List
+        </button>
+
+        {emailListStatus && (
+          <p style={{ marginTop: "0.8rem", color: emailListStatus.startsWith("✅") ? "green" : "red" }}>
+            {emailListStatus}
+          </p>
+        )}
+
+        {emailList.length > 0 && (
+          <ul style={{ marginTop: "1rem" }}>
+            {emailList.map((email, idx) => (
+              <li key={idx}>📧 {email}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div> 
   );
 }
 
