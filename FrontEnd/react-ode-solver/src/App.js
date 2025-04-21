@@ -117,10 +117,8 @@ function App() {
    const [emailList, setEmailList] = useState([]);
    const [emailListStatus, setEmailListStatus] = useState("");
 
-   const [lastHistoryFetch, setLastHistoryFetch] = useState(null);
-
-   const [problem,  setProblem]  = useState("");
-   const [solution, setSolution] = useState("");
+   // controls the Unsubscribe modal
+  const [showUnsubscribeModal, setShowUnsubscribeModal] = useState(false);
 
 
   // ─── Refs ───
@@ -270,26 +268,6 @@ const handleFetchEmails = async () => {
       console.error("Failed to fetch email list:", err);
       setEmailListStatus("❌ Failed to fetch emails.");
     }
-  };
-  // ─── Handler: Load & toggle History ───
-  const loadHistory = async () => {
-    try {
-      const { data } = await axios.get("http://localhost:5000/history");
-      setHistoryRecords(data.history || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-  const toggleHistory = async () => {
-    const now = Date.now();
-    if (!isHistoryOpen) {
-      // only fetch if never fetched or >48h ago:
-      if (!lastHistoryFetch || now - lastHistoryFetch > 48 * 3600_000) {
-        await loadHistory();
-        setLastHistoryFetch(now);
-      }
-    }
-    setIsHistoryOpen(!isHistoryOpen);
   };
   
 
@@ -963,33 +941,63 @@ const newMethodODE = () => {
     )}
   </div>
 
-  {/* Unsubscribe */}
-  <div
-    className="actionItem"
-    onMouseEnter={() => setShowUnsubscribePanel(true)}
-    onMouseLeave={() => setShowUnsubscribePanel(false)}
-  >
-    <button className="btn-unsubscribe">Unsubscribe</button>
-    {showUnsubscribePanel && (
-      <div className="bottomLeftPanel unsubscribePanel">
-        <button className="closeSmall" onClick={() => setShowUnsubscribePanel(false)}>
-          ×
-        </button>
-        <h4>Unsubscribe</h4>
-        {subscriberEmail ? (
-          <>
-            <p>Unsubscribe {subscriberEmail}?</p>
-            <button onClick={handleUnsubscribe}>Yes</button>
-          </>
-        ) : (
-          <p style={{ color: "red" }}>
-            ❌ Please enter your email above before unsubscribing.
-          </p>
-        )}
-        {subscribeStatus && <p style={{ marginTop: 8 }}>{subscribeStatus}</p>}
+  {/* Unsubscribe trigger */}
+  <div className="actionItem">
+    <button
+      className="btn-unsubscribe"
+      onClick={() => setShowUnsubscribeModal(true)}
+    >
+      Unsubscribe
+    </button>
+  </div>
+  
+  {/* ─── NEW: UNSUBSCRIBE MODAL ─── */}
+  {showUnsubscribeModal && (
+      <div
+        className="modalOverlay"
+        onClick={() => setShowUnsubscribeModal(false)}
+      >
+        <div className="panel" onClick={e => e.stopPropagation()}>
+          <button
+            className="closeButton"
+            onClick={() => setShowUnsubscribeModal(false)}
+          >
+            &times;
+          </button>
+          <h3>Unsubscribe</h3>
+          <p>Enter your email to unsubscribe:</p>
+          <input
+            type="email"
+            placeholder="you@example.com"
+            value={subscriberEmail}
+            onChange={e => setSubscriberEmail(e.target.value)}
+            style={{ width: "100%", margin: "0.5rem 0" }}
+          />
+          <button
+            className="btn-unsubscribe"
+            style={{ width: "100%" }}
+            onClick={async () => {
+              await handleUnsubscribe();
+              // optionally auto‐close if successful:
+              // if (subscribeStatus.startsWith("✅")) setShowUnsubscribeModal(false);
+            }}
+          >
+            Confirm Unsubscribe
+          </button>
+          {subscribeStatus && (
+            <p
+              style={{
+                marginTop: "0.75rem",
+                color: subscribeStatus.startsWith("✅") ? "green" : "red"
+              }}
+            >
+              {subscribeStatus}
+            </p>
+          )}
+        </div>
       </div>
     )}
-  </div>
+
 
   {/* Fetch Email List */}
   <div
