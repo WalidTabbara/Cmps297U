@@ -93,12 +93,12 @@ textarea:focus {
   margin-bottom: 1rem;
 }
 
-/* Buttons – keep original colors */
+/* ensure every bottom button (including our “NewMethod” one) has the same padding */
 .tokenButton,
 .solveButton,
 .newButton,
-.newSeparableButton,
-.newFirstOrderButton {
+.newFirstOrderButton,
+.newMethodButton {
   padding: 10px 20px;
   border: none;
   border-radius: 4px;
@@ -165,8 +165,9 @@ textarea:focus {
 
 /* Bottom buttons container: wrap in a centering wrapper */
 .bottomButtons {
-  display: inline-block;
-  gap: 0.3rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;           /* spacing between buttons */
 }
 
 /* Wrapper for bottom buttons to center them */
@@ -222,4 +223,234 @@ textarea:focus {
   border-bottom: 1px solid #ddd;
   margin-bottom: 10px;
   padding-bottom: 10px;
+}
+
+
+/* ensure container can position its children */
+.container {
+  position: relative;
+}
+
+/* wrapper for the three buttons */
+/* NEW */
+.topLeftActions {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;   /* stack vertically */
+  gap: 0.5rem;
+  z-index: 1000;
+}
+.btn-upload,
+.btn-retrieve,
+.btn-generate {
+  padding: 10px 15px;
+  border-radius: 5px;
+}
+
+.topLeftActions button {
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.topLeftActions button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
+}
+
+
+/* individual button styles */
+.btn-upload {
+  background-color: #28a745;  /* green */
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+}
+.btn-upload:hover { background-color: #218838; }
+
+.btn-retrieve {
+  background-color: #17a2b8;  /* teal */
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+}
+.btn-retrieve:hover { background-color: #138496; }
+
+.btn-generate {
+  background-color: #ffc107;  /* amber */
+  color: #212529;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+}
+.btn-generate:hover { background-color: #e0a800; }
+
+/* full‑screen translucent backdrop */
+.modalOverlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+/* the white panel in the middle */
+.panel {
+  position: relative;
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  max-width: 90%;
+  width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* top‑right “×” button */
+.closeButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+}
+/* give Instructions its own color if you like */
+.instructionsButton {
+  background-color: #6f42c1;  /* purple, for example */
+}
+.instructionsButton:hover {
+  background-color: #59359c;
+}
+/* drop the Instructions button down below History */
+.historyButton.instructionsButton {
+  top: 10px;    /* 10px (History’s top) + ~40px History height + 10px gap */
+}
+/* First‑button: method reset */
+.newMethodButton {
+  background-color: #ffc107;    /* or pick any accent color */
+  color: #212529;
+}
+.newMethodButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+/* fix the three action buttons bottom‑left */
+.bottomLeftActions {
+  position: fixed;
+  bottom: 60px;  /* push higher */
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 1000;
+}
+
+.actionItem {
+  position: relative;
+}
+
+.bottomLeftPanel {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 240px;
+  padding: 0.75rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transform: translateY(10px) scale(0.95);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.actionItem:hover .bottomLeftPanel {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.subscribePanel   { background: #e6f7ff; }
+.unsubscribePanel { background: #fff1f0; }
+.fetchPanel       { background: #f9f0ff; }
+
+.closeSmall {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.bottomLeftPanel button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  background: #007bff;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.bottomLeftPanel button:hover {
+  background: #0069d9;
+}
+/* bottom‑left action buttons */
+.bottomLeftActions button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+/* Subscribe = green */
+.btn-subscribe {
+  background-color: #28a745;
+}
+.btn-subscribe:hover {
+  background-color: #218838;
+}
+
+/* Unsubscribe = red */
+.btn-unsubscribe {
+  background-color: #dc3545;
+}
+.btn-unsubscribe:hover {
+  background-color: #c82333;
+}
+
+/* Fetch = teal */
+.btn-fetch {
+  background-color: #17a2b8;
+}
+.btn-fetch:hover {
+  background-color: #138496;
+}
+.actionItem {
+  position: relative;
+  display: inline-block;        /* so the popup stays open on hover */
+}
+
+.bottomLeftActions button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+  width: 140px;                /* match your other buttons */
+  text-align: center;
 }
