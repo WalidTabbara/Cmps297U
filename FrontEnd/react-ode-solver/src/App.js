@@ -313,7 +313,7 @@ const handleFetchEmails = async () => {
       }
     }
     try {
-      const res = await axios.post("http://localhost:5000/solve", payload);
+      const res = await axios.post("http://16.170.234.193:5000/solve", payload);
       setOutput(res.data.steps || "");
     } catch {
       setOutput("Error solving the equation. Check the input and try again.");
