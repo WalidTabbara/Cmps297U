@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from sympy import symbols, sympify, integrate, Eq, latex, sin, cos, exp,tan,cot,sec,csc,cosh,log,sinh,tanh,sech,csch,ln,cbrt, Function, simplify, diff,sqrt,log,Matrix,Derivative
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelt
 
 app = Flask(__name__)
 CORS(app)
@@ -766,16 +766,5 @@ def solve():
         print("❌ solve() exception:\n", tb)
         return jsonify({"steps": f"Backend Error:\n{tb}", "solution": ""})
 
-
-# --- /history Endpoint ---
-@app.route("/history", methods=["GET"])
-def history_api():
-    cutoff = datetime.now() - timedelta(days=120)  # roughly 4 months
-    recent_history = [
-        {"input": rec.get("input", ""), "solution": rec.get("solution", "")}
-        for rec in history_records
-        if datetime.fromisoformat(rec["timestamp"]) >= cutoff
-    ]
-    return jsonify({"history": recent_history}), 200
 
 if __name__ == '__main__':
